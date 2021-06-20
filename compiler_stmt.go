@@ -52,6 +52,7 @@ func (c *compiler) compileStatement(v ast.Statement, needResult bool) {
 	case *ast.WithStatement:
 		c.compileWithStatement(v, needResult)
 	case *ast.DebuggerStatement:
+		c.compileDebuggerStatement()
 	default:
 		c.assert(false, int(v.Idx0())-1, "Unknown statement type: %T", v)
 		panic("unreachable")
@@ -1127,4 +1128,11 @@ func (c *compiler) compileSwitchStatement(v *ast.SwitchStatement, needResult boo
 
 func (c *compiler) compileClassDeclaration(v *ast.ClassDeclaration) {
 	c.emitLexicalAssign(v.Class.Name.Name, int(v.Class.Class)-1, c.compileClassLiteral(v.Class, false))
+}
+
+func (c *compiler) compileDebuggerStatement() {
+	// Emit debugger instruction only if debug mode is enabled
+	if c.debugMode {
+		c.emit(debugger)
+	}
 }

@@ -85,6 +85,8 @@ type compiler struct {
 	ctxVM  *vm // VM in which an eval() code is compiled
 
 	codeScratchpad []instruction
+
+	debugMode bool
 }
 
 type binding struct {
@@ -379,6 +381,10 @@ func (c *compiler) newBlockScope() {
 
 func (c *compiler) popScope() {
 	c.scope = c.scope.outer
+}
+
+func (c *compiler) enableDebugMode() {
+	c.debugMode = true
 }
 
 func newCompiler() *compiler {
@@ -890,7 +896,11 @@ found:
 	s.bindings = s.bindings[:l]
 }
 
-func (c *compiler) compile(in *ast.Program, strict, inGlobal bool, evalVm *vm) {
+func (c *compiler) compile(in *ast.Program, strict, inGlobal bool, evalVm *vm, debug bool) {
+	if debug {
+		c.enableDebugMode()
+	}
+
 	c.ctxVM = evalVm
 
 	eval := evalVm != nil
