@@ -896,11 +896,7 @@ found:
 	s.bindings = s.bindings[:l]
 }
 
-func (c *compiler) compile(in *ast.Program, strict, inGlobal bool, evalVm *vm, debug bool) {
-	if debug {
-		c.enableDebugMode()
-	}
-
+func (c *compiler) compile(in *ast.Program, strict, inGlobal bool, evalVm *vm) {
 	c.ctxVM = evalVm
 
 	eval := evalVm != nil
