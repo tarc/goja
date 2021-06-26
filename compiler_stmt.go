@@ -1131,8 +1131,7 @@ func (c *compiler) compileClassDeclaration(v *ast.ClassDeclaration) {
 }
 
 func (c *compiler) compileDebuggerStatement() {
-	// Emit debugger instruction only if debug mode is enabled
-	if c.debugMode {
-		c.emit(debugger)
-	}
+	// The emitted debugger instruction will have no effect other than
+	// increasing vm.pc, if r.debugMode is not set
+	c.emit(debugger)
 }
