@@ -528,7 +528,7 @@ func (vm *vm) debug() {
 			break
 		}
 
-		if vm.debugger != nil && vm.debugger.notActive && vm.debugger.isBreakpoint() {
+		if vm.debugger != nil && !vm.debugger.active && vm.debugger.isBreakpoint() {
 			// lastLine := vm.debugger.Line()
 			vm.debugger.updateCurrentLine()
 			vm.debugger.activate(BreakpointActivation)
@@ -1421,7 +1421,7 @@ var debugger _debugger
 
 func (_debugger) exec(vm *vm) {
 	vm.pc++
-	if vm.debugMode && vm.debugger.notActive { // this jumps over debugger statements
+	if vm.debugMode && !vm.debugger.active { // this jumps over debugger statements
 		vm.debugger.activate(DebuggerStatementActivation)
 	}
 }
