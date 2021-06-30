@@ -1272,7 +1272,7 @@ func New() *Runtime {
 
 func (r *Runtime) EnableDebugMode() *Debugger {
 	r.vm.debugMode = true
-	r.vm.debugger = NewDebugger(r.vm)
+	r.vm.debugger = newDebugger(r.vm)
 	return r.vm.debugger
 }
 
