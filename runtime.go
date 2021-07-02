@@ -1280,14 +1280,19 @@ func (r *Runtime) EnableDebugMode() *Debugger {
 // method. This representation is not linked to a runtime in any way and can be run in multiple runtimes (possibly
 // at the same time).
 func Compile(name, src string, strict bool) (*Program, error) {
-	return compile(name, src, strict, true, nil)
+	return compile(name, src, strict, true, false, nil)
 }
 
 // CompileAST creates an internal representation of the JavaScript code that can be later run using the Runtime.RunProgram()
 // method. This representation is not linked to a runtime in any way and can be run in multiple runtimes (possibly
 // at the same time).
 func CompileAST(prg *js_ast.Program, strict bool) (*Program, error) {
-	return compileAST(prg, strict, true, nil)
+	return compileAST(prg, strict, true, false, nil)
+}
+
+// CompileASTDebug is like CompileAST but enables debug mode when compiling
+func CompileASTDebug(prg *js_ast.Program, strict bool) (*Program, error) {
+	return compileAST(prg, strict, false, true, nil)
 }
 
 // MustCompile is like Compile but panics if the code cannot be compiled.
@@ -1323,17 +1328,17 @@ func Parse(name, src string, options ...parser.Option) (prg *js_ast.Program, err
 	return
 }
 
-func compile(name, src string, strict, inGlobal bool, evalVm *vm, parserOptions ...parser.Option) (p *Program, err error) {
+func compile(name, src string, strict, inGlobal, debug bool, evalVm *vm, parserOptions ...parser.Option) (p *Program, err error) {
 	prg, err := Parse(name, src, parserOptions...)
 	if err != nil {
 		return
 	}
 
-	return compileAST(prg, strict, inGlobal, evalVm)
+	return compileAST(prg, strict, inGlobal, debug, evalVm)
 }
 
-func compileAST(prg *js_ast.Program, strict, inGlobal bool, evalVm *vm) (p *Program, err error) {
-	c := newCompiler()
+func compileAST(prg *js_ast.Program, strict, inGlobal, debug bool, evalVm *vm) (p *Program, err error) {
+	c := newCompiler(debug)
 
 	defer func() {
 		if x := recover(); x != nil {
@@ -1353,7 +1358,7 @@ func compileAST(prg *js_ast.Program, strict, inGlobal bool, evalVm *vm) (p *Prog
 }
 
 func (r *Runtime) compile(name, src string, strict, inGlobal bool, evalVm *vm) (p *Program, err error) {
-	p, err = compile(name, src, strict, inGlobal, evalVm, r.parserOptions...)
+	p, err = compile(name, src, strict, inGlobal, r.vm.debugMode, evalVm, r.parserOptions...)
 	if err != nil {
 		switch x1 := err.(type) {
 		case *CompilerSyntaxError:
