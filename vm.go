@@ -265,6 +265,9 @@ type vm struct {
 	interrupted   uint32
 	interruptVal  interface{}
 	interruptLock sync.Mutex
+
+	debugger  *Debugger
+	debugMode bool // TODO drop this as we can just check debugger is nil or not
 }
 
 type instruction interface {
@@ -513,6 +516,66 @@ func (vm *vm) run() {
 	}
 }
 
+func (vm *vm) debug() {
+	vm.halt = false
+	interrupted := false
+	ticks := 0
+	// vm.debugger.activate(ProgramStartActivation)
+
+	for !vm.halt {
+		if interrupted = atomic.LoadUint32(&vm.interrupted) != 0; interrupted {
+			break
+		}
+
+		if vm.debugger != nil {
+			if !vm.debugger.active && vm.debugger.breakpoint() {
+				if vm.debugger.lastBreakpoint.filename == vm.debugger.Filename() &&
+					vm.debugger.lastBreakpoint.line == vm.debugger.Line() &&
+					vm.debugger.callStackDepth() <= vm.debugger.lastBreakpoint.stackDepth {
+					// Staying on same breakpoint, do nothing.
+				} else {
+					prevStackDepth := vm.debugger.lastBreakpoint.stackDepth
+					vm.debugger.lastBreakpoint.filename = vm.debugger.Filename()
+					vm.debugger.lastBreakpoint.line = vm.debugger.Line()
+					vm.debugger.lastBreakpoint.stackDepth = vm.debugger.callStackDepth()
+					if vm.debugger.lastBreakpoint.stackDepth >= prevStackDepth {
+						vm.debugger.updateCurrentLine()
+						vm.debugger.activate(BreakpointActivation)
+					}
+
+				}
+			} else {
+				vm.debugger.lastBreakpoint.filename = ""
+				vm.debugger.lastBreakpoint.line = -1
+			}
+			if vm.debugger != nil {
+				vm.debugger.lastBreakpoint.stackDepth = vm.debugger.callStackDepth()
+			}
+		}
+
+		vm.prg.code[vm.pc].exec(vm)
+
+		ticks++
+		if ticks > 10000 {
+			runtime.Gosched()
+			ticks = 0
+		}
+	}
+
+	if interrupted {
+		vm.interruptLock.Lock()
+		v := &InterruptedError{
+			iface: vm.interruptVal,
+		}
+		atomic.StoreUint32(&vm.interrupted, 0)
+		vm.interruptVal = nil
+		vm.interruptLock.Unlock()
+		panic(&uncatchableException{
+			err: v,
+		})
+	}
+}
+
 func (vm *vm) Interrupt(v interface{}) {
 	vm.interruptLock.Lock()
 	vm.interruptVal = v
@@ -636,7 +699,11 @@ func (vm *vm) try(f func()) (ex *Exception) {
 }
 
 func (vm *vm) runTry() (ex *Exception) {
-	return vm.try(vm.run)
+	if vm.debugMode {
+		return vm.try(vm.debug)
+	} else {
+		return vm.try(vm.run)
+	}
 }
 
 func (vm *vm) push(v Value) {
@@ -1362,6 +1429,17 @@ var halt _halt
 func (_halt) exec(vm *vm) {
 	vm.halt = true
 	vm.pc++
+}
+
+type _debugger struct{}
+
+var debugger _debugger
+
+func (_debugger) exec(vm *vm) {
+	vm.pc++
+	if vm.debugMode && !vm.debugger.active { // this jumps over debugger statements
+		vm.debugger.activate(DebuggerStatementActivation)
+	}
 }
 
 type jump int32
@@ -4005,7 +4083,6 @@ end:
 		return valueTrue
 	}
 	return valueFalse
-
 }
 
 type _op_lt struct{}

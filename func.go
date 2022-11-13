@@ -315,7 +315,11 @@ func (f *baseJsFuncObject) _call(args []Value, newTarget, this Value) Value {
 	vm.privEnv = f.privEnv
 	vm.newTarget = newTarget
 	vm.pc = 0
-	vm.run()
+	if vm.debugMode {
+		vm.debug()
+	} else {
+		vm.run()
+	}
 	if pc != -1 {
 		vm.popCtx()
 	}
