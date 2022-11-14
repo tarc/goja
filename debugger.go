@@ -286,7 +286,7 @@ func (dbg *Debugger) eval(expr string) (v Value, err error) {
 		this = dbg.vm.r.globalObject
 	}
 
-	c.compile(prg, false, true, this == dbg.vm.r.globalObject)
+	c.compile(prg, false, this == dbg.vm.r.globalObject, dbg.vm)
 
 	defer func() {
 		if x := recover(); x != nil {
